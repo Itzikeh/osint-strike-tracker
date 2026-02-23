@@ -1,160 +1,138 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
 import google.generativeai as genai
 from datetime import datetime
+import time
 
-# הגדרות עיצוב מתקדמות למראה "חמ"ל"
-st.set_page_config(page_title="STRATEGIC INTEL HUB", layout="wide")
+# הגדרות דף רחבות וכהות
+st.set_page_config(page_title="STRATEGIC INTEL HUB", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS מותאם אישית למראה Cyber-Audit מרשים
+# --- CSS מתקדם לעיצוב חללי (Glassmorphism & Cyber) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&display=swap');
     
-    html, body, [class*="st-"] {
-        font-family: 'JetBrains Mono', monospace;
-        background-color: #050505;
-        color: #00ff41;
-    }
-    
+    /* רקע ואנימציית רשת */
     .stApp {
-        background: radial-gradient(circle at center, #0a1a0a 0%, #050505 100%);
+        background-color: #050505;
+        background-image: linear-gradient(0deg, transparent 24%, rgba(0, 255, 65, .05) 25%, rgba(0, 255, 65, .05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 65, .05) 75%, rgba(0, 255, 65, .05) 76%, transparent 77%, transparent), 
+                          linear-gradient(90deg, transparent 24%, rgba(0, 255, 65, .05) 25%, rgba(0, 255, 65, .05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 65, .05) 75%, rgba(0, 255, 65, .05) 76%, transparent 77%, transparent);
+        background-size: 50px 50px;
     }
 
-    /* כרטיסיות אינדיקטורים */
-    .metric-card {
-        background: rgba(15, 15, 15, 0.8);
-        border: 1px solid #1f1f1f;
-        padding: 15px;
-        border-radius: 4px;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-    .metric-card:hover {
-        border-color: #00ff41;
-        box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
-    }
-    
-    .status-critical { color: #ff003c; text-shadow: 0 0 5px #ff003c; }
-    .status-warning { color: #ffaa00; }
-    .status-normal { color: #00ff41; }
-    
-    .header-box {
-        border-left: 5px solid #00ff41;
-        padding-left: 15px;
-        margin-bottom: 25px;
-    }
-    
-    /* עיצוב ה-AI */
-    .ai-response {
-        background: rgba(255, 255, 255, 0.03);
-        border-right: 3px solid #ff003c;
+    /* כרטיסי נתונים מעוצבים */
+    .intel-card {
+        background: rgba(20, 20, 20, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 255, 65, 0.3);
+        border-radius: 10px;
         padding: 20px;
-        font-size: 0.9rem;
-        line-height: 1.6;
+        margin-bottom: 10px;
+        transition: 0.3s;
     }
+    .intel-card:hover {
+        border-color: #00ff41;
+        box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+    }
+
+    .metric-title { font-family: 'Orbitron', sans-serif; color: #888; font-size: 0.7rem; text-transform: uppercase; }
+    .metric-value { font-family: 'JetBrains Mono', monospace; color: #00ff41; font-size: 1.5rem; font-weight: bold; }
+    .critical-value { color: #ff003c; text-shadow: 0 0 10px #ff003c; }
+    
+    /* כותרות */
+    h1, h2, h3 { font-family: 'Orbitron', sans-serif !important; color: #00ff41 !important; text-transform: uppercase; letter-spacing: 3px; }
+    
+    /* אנימציית פעימה לאינדיקטורים קריטיים */
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+    .status-pulse { animation: pulse 1.5s infinite; color: #ff003c; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# חיבור ל-AI - פתרון שגיאת 404
+# --- חיבור ל-AI (Gemini) ---
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # ניסיון טעינה של מספר וריאציות כדי למנוע קריסה
-    try:
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-    except:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 else:
     model = None
 
-# כותרת האפליקציה
-st.markdown("<div class='header-box'><h1>STRATEGIC OSINT TRACKER v2.0</h1><p>REAL-TIME REGIONAL THREAT MONITOR</p></div>", unsafe_allow_html=True)
+# --- כותרת ראשית ---
+st.markdown("""
+    <div style="text-align: center; padding: 20px;">
+        <h1 style="margin: 0;">🛰️ OSINT COMMAND CENTER</h1>
+        <p style="color: #00ff41; font-family: 'JetBrains Mono'; opacity: 0.7;">ENCRYPTED STRATEGIC FEED // UNIT 8200 STYLE</p>
+    </div>
+""", unsafe_allow_html=True)
 
-# פונקציה ליצירת כרטיס מעוצב
-def draw_indicator(label, value, status="normal"):
-    status_class = f"status-{status}"
+# --- פונקציה לכרטיס גרפי ---
+def intel_box(title, value, is_critical=False):
+    style = "critical-value status-pulse" if is_critical else "metric-value"
     st.markdown(f"""
-        <div class="metric-card">
-            <div style="font-size: 0.7rem; color: #888;">{label}</div>
-            <div class="{status_class}" style="font-size: 1.2rem; font-weight: bold;">{value}</div>
+        <div class="intel-card">
+            <div class="metric-title">{title}</div>
+            <div class="{style}">{value}</div>
         </div>
     """, unsafe_allow_html=True)
 
-# --- חלוקה ל-5 קטגוריות (24 אינדיקטורים) ---
+# --- חלוקת המסך ל-Grid של 24 אינדיקטורים ---
+categories = {
+    "📊 Markets": [("War Risk", "HIGH", True), ("Oil Bias", "$65.4", False), ("Polymarket", "82%", True), ("Rial (Black)", "621K", True), ("Kharg AIS", "SILENT", True)],
+    "✈️ Aviation": [("ISR Fleet", "EVACUATED", False), ("ESCAT", "ACTIVE", True), ("IRN Flights", "GROUNDED", True), ("VIP Jets", "MASHHAD", False)],
+    "⚔️ Military": [("USS Georgia", "RED SEA", True), ("KC-46 Hub", "SPIKE", True), ("B-2 Spirit", "DEPLOYED", True), ("Nuclear", "REINFORCED", True), ("IRGC Command", "OFFLINE", True)],
+    "📡 Signals": [("Net Outage", "65%", True), ("GPS Jam", "LVL 5", True), ("Proxy Talk", "SILENT", False), ("SIGINT", "SPIKE", True), ("Cyber Scan", "CRITICAL", True)],
+    "🌍 Diplomatic": [("Embassy", "EVACUATING", True), ("Witkoff", "DEPARTED", True), ("Decoy Model", "ACTIVE", False), ("Medical", "CODE RED", True)]
+}
 
-with st.container():
-    st.subheader("🌐 MARKET & MARITIME")
-    col = st.columns(5)
-    with col[0]: draw_indicator("War Risk Premium", "CRITICAL", "critical")
-    with col[1]: draw_indicator("Brent Oil Anomaly", "$65.20", "warning")
-    with col[2]: draw_indicator("Polymarket Probability", "78%", "critical")
-    with col[3]: draw_indicator("IRR Black Market", "618K", "warning")
-    with col[4]: draw_indicator("Kharg Terminal AIS", "ZERO", "critical")
+# תצוגת הקטגוריות בטורים
+cols = st.columns(5)
+all_indicators = [] # לאיסוף הנתונים עבור ה-AI
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-with st.container():
-    st.subheader("✈️ AVIATION OSINT")
-    col = st.columns(4)
-    with col[0]: draw_indicator("ISR Civilian Fleet", "EVACUATED", "warning")
-    with col[1]: draw_indicator("ESCAT Saudi", "ACTIVE", "critical")
-    with col[2]: draw_indicator("Iran Flight Status", "SUSPENDED", "critical")
-    with col[3]: draw_indicator("VIP Flight Track", "DEPARTING", "warning")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-with st.container():
-    st.subheader("⚔️ MILITARY POSTURE")
-    col = st.columns(5)
-    with col[0]: draw_indicator("USS Georgia", "DETECTED", "critical")
-    with col[1]: draw_indicator("KC-46 Refueling", "SPIKE", "warning")
-    with col[2]: draw_indicator("B-2 Deployment", "ACTIVE", "critical")
-    with col[3]: draw_indicator("Nuclear Facilities", "SEALING", "critical")
-    with col[4]: draw_indicator("IRGC Leadership", "BUNKERED", "critical")
+for i, (cat_name, items) in enumerate(categories.items()):
+    with cols[i]:
+        st.markdown(f"### {cat_name}")
+        for label, val, crit in items:
+            intel_box(label, val, crit)
+            all_indicators.append(f"{label}: {val}")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-with st.container():
-    st.subheader("📡 CYBER & SIGINT")
-    col = st.columns(6)
-    with col[0]: draw_indicator("Gulf Social", "PANIC", "warning")
-    with col[1]: draw_indicator("Net Blackouts", "ACTIVE", "critical")
-    with col[2]: draw_indicator("GPS Jamming", "LEVEL 5", "critical")
-    with col[3]: draw_indicator("Proxy Chatter", "SILENT", "warning")
-    with col[4]: draw_indicator("SIGINT Spikes", "HIGH", "critical")
-    with col[5]: draw_indicator("Infra-Cyber", "SCANS", "warning")
+# --- גרפיקה חיה (Real-time chart) ---
+st.subheader("📈 STRATEGIC TENSION INDEX (24H)")
+chart_data = pd.DataFrame(
+    np.random.randn(20, 3),
+    columns=['GPS Jamming', 'Market Panic', 'Military Comms']
+).cumsum()
+st.line_chart(chart_data)
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-with st.container():
-    st.subheader("🌍 DIPLOMACY & DEFENSE")
-    col = st.columns(4)
-    with col[0]: draw_indicator("Summit Deception", "ACTIVE", "warning")
-    with col[1]: draw_indicator("Witkoff Plane", "EXITED", "critical")
-    with col[2]: draw_indicator("Embassy Status", "EVACUATING", "critical")
-    with col[3]: draw_indicator("Hospital Readiness", "CODE RED", "critical")
-
+# --- מנוע הניתוח המבצעי (Gemini) ---
 st.divider()
-
-# --- לוג ניתוח AI בסגנון "Terminal" ---
-st.subheader("⚡ AI COMMANDER ANALYSIS")
-if st.button("EXECUTE DATA SYNTHESIS"):
+st.subheader("⚡ TACTICAL ANALYSIS ENGINE")
+if st.button("GENERATE STRATEGIC ESTIMATE"):
     if model:
-        try:
-            prompt = "Analyze these 24 indicators for imminent war. Priority: Critical. Format: Military Intel Report. Language: Hebrew."
-            response = model.generate_content(prompt)
-            st.markdown(f"<div class='ai-response'>{response.text}</div>", unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"SYSTEM FAILURE: {str(e)}")
+        with st.spinner("Processing Global Signals..."):
+            prompt = f"Analyze these signals: {', '.join(all_indicators)}. Provide a war probability estimate and a military-style summary in Hebrew."
+            try:
+                response = model.generate_content(prompt)
+                st.markdown(f"""
+                    <div style="background: rgba(255,0,60,0.1); border: 1px solid #ff003c; padding: 20px; border-radius: 5px; color: white;">
+                        <h4 style="color: #ff003c;">[CLASSIFIED] AI ESTIMATE:</h4>
+                        {response.text}
+                    </div>
+                """, unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Engine Error: {e}")
     else:
-        st.error("AI AUTHENTICATION FAILED. CHECK SECRETS.")
+        st.error("AI Key Offline")
 
-# רשימת לוגים כמו באתר ששלחת
-st.markdown("<br>", unsafe_allow_html=True)
-st.subheader("📋 RECENT LOGS")
-logs = pd.DataFrame([
-    {"Timestamp": "22:45", "Event": "GPS Spoofing detected over central Israel", "Source": "SIGINT"},
-    {"Timestamp": "22:31", "Event": "Chinese Embassy staff leaving Tehran", "Source": "HUMINT"},
-    {"Timestamp": "22:15", "Event": "KC-135 Stratotanker heading to Persian Gulf", "Source": "ADS-B"}
-])
-st.table(logs)
+# לוגים תחתונים
+st.subheader("📜 RECENT COMMS LOG")
+st.code("""
+[22:14] SIGINT: Encrypted traffic spike detected - Tehran to Beirut.
+[21:55] IMINT: Thermal signatures confirmed at Fordow entrance.
+[21:30] OSINT: Local reports of civilian evacuation in Southern Lebanon.
+""", language="accesslog")
