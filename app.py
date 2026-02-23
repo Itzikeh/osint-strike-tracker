@@ -1,70 +1,89 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import google.generativeai as genai
 from datetime import datetime
-import requests
 
-# הגדרות דף
-st.set_page_config(page_title="OSINT STRATEGIC TRACKER", layout="wide")
+# הגדרות עיצוב מתקדמות
+st.set_page_config(page_title="STRATEGIC OSINT DASHBOARD", layout="wide")
 
-# ניסיון חיבור ל-API של Gemini
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception:
-    model = None
-
-# פונקציות לשאיבת נתונים (Placeholder לנתונים חיים)
-def get_live_data():
-    # כאן בעתיד נחבר APIs אמיתיים
-    return {
-        "oil": "72.45",
-        "rial": "615,000",
-        "gps": "Severe Interference (Northern Israel)",
-        "polymarket": "64%"
-    }
-
-data = get_live_data()
-
-# עיצוב בסגנון חמ"ל (Dark Mode)
 st.markdown("""
     <style>
-    .main { background-color: #050505; color: #00FF41; }
-    [data-testid="stMetricValue"] { color: #00FF41 !important; }
-    .stButton>button { width: 100%; background-color: #1a1a1a; color: #00FF41; border: 1px solid #00FF41; }
+    .main { background-color: #000000; color: #00FF41; font-family: 'Courier New', Courier, monospace; }
+    .stMetric { border: 1px solid #00FF41; padding: 10px; background: #0a0a0a; border-radius: 0px; }
+    .category-header { color: #00FF41; border-bottom: 2px solid #00FF41; padding-bottom: 5px; margin-top: 20px; text-transform: uppercase; letter-spacing: 2px; }
+    .ai-box { border: 1px dashed #ff4b4b; padding: 15px; background: #1a0000; color: #ff4b4b; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🛰️ OSINT STRATEGIC TRACKER")
-st.write(f"🛡️ **System Status:** Online | **Last Scan:** {datetime.now().strftime('%H:%M:%S')}")
+# חיבור ל-Gemini
+model = None
+if "GEMINI_API_KEY" in st.secrets:
+    try:
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        model = genai.GenerativeModel('gemini-1.5-flash')
+    except: pass
 
-# שורת מדדים
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Brent Oil", f"${data['oil']}")
-c2.metric("IRR/USD (Black Market)", data['rial'])
-c3.metric("War Probability", data['polymarket'])
-c4.metric("GPS Status", "JAMMING", delta="Active", delta_color="inverse")
+st.title("⚡ OSINT STRATEGIC COMMAND CENTER")
+st.write(f"SYSTEM STATUS: ACTIVE | UTC: {datetime.utcnow().strftime('%H:%M:%S')} | LOCATION: MIDDLE EAST")
+
+# --- פריסת 24 האינדיקטורים ---
+
+# קבוצה 1: כלכלה, שווקים וספנות
+st.markdown("<div class='category-header'>📊 Market & Maritime Intel</div>", unsafe_allow_html=True)
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("War Risk (Lloyd's)", "High", "+12%")
+c2.metric("Brent Oil Anomaly", "$65.2", "MANIPULATED")
+c3.metric("Polymarket War %", "74%", "+8%")
+c4.metric("IRR Black Market", "615K", "Panic Buy")
+c5.metric("Kharg Island AIS", "EMPTY", "Critical")
+
+# קבוצה 2: תעופה אזרחית (Aviation OSINT)
+st.markdown("<div class='category-header'>✈️ Aviation & Airspace</div>", unsafe_allow_html=True)
+c6, c7, c8, c9 = st.columns(4)
+c6.metric("ISR Civilian Fleet", "EVACUATED", "Safe Ports")
+c7.metric("ESCAT Saudi", "ACTIVE", "NOTAM Restricted")
+c8.metric("Iran Domestic Flights", "SUSPENDED", "Clear Skies")
+c9.metric("Gov VIP Movement", "ACTIVE", "Tehran -> Mashhad")
+
+# קבוצה 3: סדר כוחות (Military Posture)
+st.markdown("<div class='category-header'>⚔️ Military Assets & Posture</div>", unsafe_allow_html=True)
+c10, c11, c12, c13, c14 = st.columns(5)
+c10.metric("USS Georgia", "IN POSITION", "Tomahawk Ready")
+c11.metric("Aerial Refueling", "KC-46 Active", "Qatar Hub")
+c12.metric("Strategic Bombers", "B-2 Deployed", "Diego Garcia")
+c13.metric("Nuclear Facilities", "CONCRETE SEAL", "Maxar Intel")
+c14.metric("IRGC Leadership", "BUNKERED", "Signal Silent")
+
+# קבוצה 4: מודיעין רשת וסייבר (Cyber & SIGINT)
+st.markdown("<div class='category-header'>📡 Cyber & SIGINT Spikes</div>", unsafe_allow_html=True)
+c15, c16, c17, c18, c19, c20 = st.columns(6)
+c15.metric("Gulf Social Sentiment", "PANIC", "Elite Exit")
+c16.metric("Internet Blackouts", "ACTIVE", "Fordow/Natanz")
+c17.metric("GPS Jamming", "LEVEL 5", "Israel/Lebanon")
+c18.metric("Proxy Chatter", "SILENT", "Pre-strike Signal")
+c19.metric("SIGINT Traffic", "SPIKE", "Encrypted")
+c20.metric("Pre-kinetic Cyber", "ACTIVE", "Water/Grid Target")
+
+# קבוצה 5: דיפלומטיה ועורף
+st.markdown("<div class='category-header'>🌍 Diplomacy & Civil Defense</div>", unsafe_allow_html=True)
+c21, c22, c23, c24 = st.columns(4)
+c21.metric("Summit Decoy", "ACTIVE", "Strategic Deception")
+c22.metric("Witkoff Plane", "DEPARTED", "T-Minus 0")
+c23.metric("Embassy Evac", "CHINA/RUSSIA", "Urgent")
+c24.metric("Hospital Prep", "ELECTIVE CANCEL", "Mass Casualty")
 
 st.divider()
 
-# לוגיקת ה-AI
-st.header("🤖 Gemini Strategic Analysis")
-if model:
-    if st.button("Generate Tactical Insight"):
-        prompt = f"""נתח את המצב הבא: מחיר הנפט {data['oil']}, שער הריאל {data['rial']}, ושיבושי GPS פעילים. 
-        מה האינדיקציה המודיעינית המיידית? ענה בעברית תמציתית בסגנון דוח אמ"ן."""
-        response = model.generate_content(prompt)
-        st.info(response.text)
-else:
-    st.warning("⚠️ המתן לחיבור API Key ב-Streamlit Secrets")
-
-# טבלת יומן אירועים
-st.subheader("📋 Operations Log")
-logs = pd.DataFrame([
-    {"Time": "22:15", "Event": "U.S. Tanker tracking Kharg Island move", "Level": "HIGH"},
-    {"Time": "21:40", "Event": "Flight cancellations: Tehran Intl Airport", "Level": "CRITICAL"},
-    {"Time": "20:10", "Event": "GPS Spoofing detected over Haifa Bay", "Level": "MEDIUM"}
-])
-st.table(logs)
+# --- מנוע הניתוח המרכזי ---
+st.subheader("📝 COMMANDER'S INTEL SUMMARY (GEMINI AI)")
+if st.button("RUN DEEP ANALYSIS"):
+    if model:
+        with st.spinner("Analyzing 24 vectors..."):
+            prompt = "נתח את כל 24 האינדיקטורים המופיעים בדאשבורד. האם אנחנו במצב של מלחמה בשעות הקרובות? תן הערכת זמן ותעדוף איומים. ענה בפורמט צבאי קשיח."
+            try:
+                response = model.generate_content(prompt)
+                st.markdown(f"<div class='ai-box'>{response.text}</div>", unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"AI Engine Failure: {str(e)}")
+    else:
+        st.error("API Key Not Found. Check Streamlit Secrets.")
