@@ -6,7 +6,7 @@ from datetime import datetime
 # הגדרות עיצוב מתקדמות
 st.set_page_config(page_title="STRATEGIC OSINT DASHBOARD", layout="wide")
 
-st.markdown("""
+st.markdown("""model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
     <style>
     .main { background-color: #000000; color: #00FF41; font-family: 'Courier New', Courier, monospace; }
     .stMetric { border: 1px solid #00FF41; padding: 10px; background: #0a0a0a; border-radius: 0px; }
